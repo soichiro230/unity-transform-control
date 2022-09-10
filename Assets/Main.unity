@@ -496,10 +496,10 @@ GameObject:
   m_Component:
   - component: {fileID: 436737079}
   - component: {fileID: 436737078}
+  - component: {fileID: 436737085}
   - component: {fileID: 436737082}
   - component: {fileID: 436737080}
   - component: {fileID: 436737081}
-  - component: {fileID: 436737085}
   - component: {fileID: 436737084}
   m_Layer: 0
   m_Name: TransformControl
@@ -524,6 +524,7 @@ MonoBehaviour:
   global: 0
   useDistance: 0
   distance: 10
+  rotUnit: 15
 --- !u!4 &436737079
 Transform:
   m_ObjectHideFlags: 0
@@ -601,7 +602,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a190e8b0df1394575a3beb0b05d51890, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  control: {fileID: 436737078}
+  controls:
+  - {fileID: 436737078}
+  - {fileID: 436737085}
 --- !u!114 &436737084
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -609,12 +612,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 436737077}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a190e8b0df1394575a3beb0b05d51890, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  control: {fileID: 436737085}
+  controls: []
 --- !u!114 &436737085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -631,6 +634,7 @@ MonoBehaviour:
   global: 0
   useDistance: 0
   distance: 10
+  rotUnit: 15
 --- !u!1001 &470243588
 PrefabInstance:
   m_ObjectHideFlags: 0

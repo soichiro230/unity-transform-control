@@ -59,11 +59,15 @@ namespace mattatz.TransformControl {
 
 	    public TransformMode mode = TransformMode.Translate;
 	    public bool global, useDistance;
-        public float distance = 10f;
+		public float distance = 10f;
+		public int rotUnit = 15;
+		[SerializeField, Range(0, 15)]
+		public int smooth = 10;
+		public bool pickFlg = false;
 
-	    Color[] colors = new Color[] { Color.red, Color.green, Color.blue, Color.yellow };
+		Color[] colors = new Color[] { Color.red, Color.green, Color.blue, Color.yellow, Color.magenta };
 
-		Dictionary<TransformDirection, Vector3> axes = new Dictionary<TransformDirection, Vector3>() {
+        Dictionary<TransformDirection, Vector3> axes = new Dictionary<TransformDirection, Vector3>() {
 			{ TransformDirection.X, Vector3.right },
 			{ TransformDirection.Y, Vector3.up },
 			{ TransformDirection.Z, Vector3.forward }
@@ -79,9 +83,10 @@ namespace mattatz.TransformControl {
 
 	    Vector3 start;
 	    bool dragging;
-	    TransformData prev;
+		TransformData prev;
+		TransformData temp;
 
-	    Mesh cone;
+		Mesh cone;
 	    Mesh cube;
 
 	    TransformDirection selected = TransformDirection.None;
@@ -100,23 +105,27 @@ namespace mattatz.TransformControl {
 	        cube = CreateCube(HANDLER_SIZE);
 
 	        GetCircumference(SPHERE_RESOLUTION, out circumX, out circumY, out circumZ);
-	    }
 
-        /*
+			temp = new TransformData(transform);
+		}
+
+		/*
         // Usage: Call Control() method in Update() loop 
 	    void Update() {
             Control();
 	    }
         */
 
-        public void Control () {
+		public void Control () {
 	        if (Input.GetMouseButtonDown(0)) {
 	            dragging = true;
 	            start = Input.mousePosition;
 	            prev = new TransformData(transform);
-                Pick();
-	        } else if (Input.GetMouseButtonUp(0)) {
+                pickFlg = Pick();
+            }
+            else if (Input.GetMouseButtonUp(0)) {
 	            dragging = false;
+				pickFlg = false;
 				selected = TransformDirection.None;
 	        }
 
@@ -135,9 +144,9 @@ namespace mattatz.TransformControl {
 	        switch(mode) {
 	            case TransformMode.Translate:
 	            case TransformMode.Scale:
-	                return PickOrthogonal(mouse);
+					return PickOrthogonal(mouse);
 	            case TransformMode.Rotate:
-	                return PickSphere(mouse);
+					return PickSphere(mouse);
 	        }
 
 	        return false;
@@ -148,10 +157,11 @@ namespace mattatz.TransformControl {
             float scale = 1f;
             if(useDistance)
             {
-                var d = (Camera.main.transform.position - transform.position).magnitude;
+                var d = (Camera.main.transform.position - new Vector3(transform.position.x, transform.position.y, transform.position.z)).magnitude;
                 scale = d / distance;
             }
-			return Matrix4x4.TRS(transform.position, global ? Quaternion.identity : transform.rotation, Vector3.one * scale);
+			return Matrix4x4.TRS(new Vector3(transform.position.x, transform.position.y, transform.position.z),
+				global ? Quaternion.identity : transform.rotation, Vector3.one * scale);
         }
 
 	    bool PickOrthogonal (Vector3 mouse) {
@@ -197,24 +207,24 @@ namespace mattatz.TransformControl {
 			var matrix = GetTranform();
 
 	        var v = mouse.xy();
-			var x = circumX.Select(p => cam.WorldToScreenPoint(matrix.MultiplyPoint(p)).xy()).ToList();
+			//var x = circumX.Select(p => cam.WorldToScreenPoint(matrix.MultiplyPoint(p)).xy()).ToList();
 	        var y = circumY.Select(p => cam.WorldToScreenPoint(matrix.MultiplyPoint(p)).xy()).ToList();
-	        var z = circumZ.Select(p => cam.WorldToScreenPoint(matrix.MultiplyPoint(p)).xy()).ToList();
+	        //var z = circumZ.Select(p => cam.WorldToScreenPoint(matrix.MultiplyPoint(p)).xy()).ToList();
 
 	        float xl, yl, zl;
 	        xl = yl = zl = float.MaxValue;
 	        for(int i = 0; i < SPHERE_RESOLUTION; i++) {
-	            xl = Mathf.Min(xl, (v - x[i]).magnitude);
+	            //xl = Mathf.Min(xl, (v - x[i]).magnitude);
 	            yl = Mathf.Min(yl, (v - y[i]).magnitude);
-	            zl = Mathf.Min(zl, (v - z[i]).magnitude);
+	            //zl = Mathf.Min(zl, (v - z[i]).magnitude);
 	        }
 
 	        if (xl < yl && xl < zl && xl < THRESHOLD) {
-	            selected = TransformDirection.X;
+	            //selected = TransformDirection.X;
 	        } else if (yl < xl && yl < zl && yl < THRESHOLD) {
 	            selected = TransformDirection.Y;
 	        } else if (zl < xl && zl < yl && zl < THRESHOLD) {
-	            selected = TransformDirection.Z;
+	            //selected = TransformDirection.Z;
 	        }
 
 	        return selected != TransformDirection.None;
@@ -314,10 +324,21 @@ namespace mattatz.TransformControl {
 
 			var rotateAxis = axes[selected];
 			if(global) rotateAxis = Quaternion.Inverse(prev.rotation) * rotateAxis;
-			transform.rotation = prev.rotation * Quaternion.AngleAxis(proj.magnitude * (Vector2.Dot(dir, perp) > 0f ? 1f : -1f), rotateAxis);
+			//transform.rotation = prev.rotation * Quaternion.AngleAxis(proj.magnitude * (Vector2.Dot(dir, perp) > 0f ? 1f : -1f), rotateAxis);
+
+			temp.rotation = prev.rotation * Quaternion.AngleAxis(proj.magnitude * (Vector2.Dot(dir, perp) > 0f ? 1f : -1f), rotateAxis);
+			var roundY = Math.Round(temp.rotation.eulerAngles.y);
+
+			if (roundY % rotUnit <= smooth)
+			{
+				Vector3 ang = transform.localEulerAngles;
+				ang.y = (float)(roundY - roundY % rotUnit);
+				transform.localEulerAngles = ang;
+			}
+
 		}
 
-	    void Scale() {
+		void Scale() {
 	        if (selected == TransformDirection.None) return;
 
 			var plane = new Plane((Camera.main.transform.position - transform.position).normalized, prev.position);
@@ -430,41 +451,44 @@ namespace mattatz.TransformControl {
 			material.SetInt("_ZTest", (int)CompareFunction.LessEqual);
 	        material.SetPass(0);
 
-	        // x axis
-	        GL.Begin(GL.LINES);
-	        var color = selected == TransformDirection.X ? colors[3] : colors[0];
-	        GL.Color(color);
-	        for(int i = 0; i < SPHERE_RESOLUTION; i++) {
-	            var cur = circumX[i];
-	            var next = circumX[(i + 1) % SPHERE_RESOLUTION];
-	            GL.Vertex(cur);
-	            GL.Vertex(next);
-	        }
-	        GL.End();
+	        //// x axis
+	        //GL.Begin(GL.LINES);
+	        //var color = selected == TransformDirection.X ? colors[3] : colors[0];
+	        //GL.Color(color);
+	        //for(int i = 0; i < SPHERE_RESOLUTION; i++) {
+	        //    var cur = circumX[i];
+	        //    var next = circumX[(i + 1) % SPHERE_RESOLUTION];
+	        //    GL.Vertex(cur);
+	        //    GL.Vertex(next);
+	        //}
+	        //GL.End();
 
-	        GL.Begin(GL.LINES);
-	        color = selected == TransformDirection.Y ? colors[3] : colors[1];
-	        GL.Color(color);
+			// y axis
+			GL.Begin(GL.LINES);
+			//color = selected == TransformDirection.Y ? colors[3] : colors[1];
+			var color = selected == TransformDirection.Y ? colors[3] : colors[4];
+			GL.Color(color);
 	        material.SetPass(0);
 	        for(int i = 0; i < SPHERE_RESOLUTION; i++) {
-	            var cur = circumY[i];
+	            var cur = new Vector3(circumY[i].x, circumY[i].y, circumY[i].z);
 	            var next = circumY[(i + 1) % SPHERE_RESOLUTION];
 	            GL.Vertex(cur);
 	            GL.Vertex(next);
 	        }
 	        GL.End();
 
-	        GL.Begin(GL.LINES);
-	        color = selected == TransformDirection.Z ? colors[3] : colors[2];
-	        GL.Color(color);
-	        material.SetPass(0);
-	        for(int i = 0; i < SPHERE_RESOLUTION; i++) {
-	            var cur = circumZ[i];
-	            var next = circumZ[(i + 1) % SPHERE_RESOLUTION];
-	            GL.Vertex(cur);
-	            GL.Vertex(next);
-	        }
-	        GL.End();
+			//// z axis
+			//GL.Begin(GL.LINES);
+	  //      color = selected == TransformDirection.Z ? colors[3] : colors[2];
+	  //      GL.Color(color);
+	  //      material.SetPass(0);
+	  //      for(int i = 0; i < SPHERE_RESOLUTION; i++) {
+	  //          var cur = circumZ[i];
+	  //          var next = circumZ[(i + 1) % SPHERE_RESOLUTION];
+	  //          GL.Vertex(cur);
+	  //          GL.Vertex(next);
+	  //      }
+	  //      GL.End();
 	    }
 
 	    void DrawScale () {
