@@ -10,12 +10,11 @@ namespace mattatz.TransformControl.Demo {
 
         void Update() {
 			controls[0].Control();
-			controls[1].Control();
 
-			//if (!controls[0].pickFlg)
-   //         {
-			//	controls[1].Control();
-			//}
+            if (!controls[0].pickFlg)
+            {
+				controls[1].Control();
+			}
 		}
 
 		//public void OnModeChanged(int index) {
