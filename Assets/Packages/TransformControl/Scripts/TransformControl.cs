@@ -507,7 +507,7 @@ namespace mattatz.TransformControl
 
         void DrawRotate()
         {
-            material.SetInt("_ZTest", (int)CompareFunction.LessEqual);
+            material.SetInt("_ZTest", (int)CompareFunction.Always);
             material.SetPass(0);
 
             //// x axis
